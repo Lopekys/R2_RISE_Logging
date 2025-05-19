@@ -80,4 +80,7 @@
 ```bash
 docker build -t bot-logger-ui .
 
+docker run -it -p 5000:5000 bot-logger-ui
+
+
 
