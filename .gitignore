@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Virtual environment
+.venv/
+env/
+venv/
+
+# IDEs
+.idea/
+.vscode/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs and runtime files
+*.pid
+*.log
+
+# Secrets and sessions
+*.json
+*.session
+
+# Compiled
+*.so
+*.egg-info/
+
+# Docker
+*.db
+*.sqlite3
+*.bak
+*.swp

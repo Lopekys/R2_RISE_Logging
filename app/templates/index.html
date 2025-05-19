@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>R2 RISE Bot Logger</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f8;
+            margin: 0;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.05);
+        }
+
+        h2, h3 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 1.2rem;
+            margin-bottom: 0.4rem;
+        }
+
+        input[type="text"],
+        input[type="file"],
+        button {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            margin-bottom: 1rem;
+        }
+
+        button {
+            background-color: #0088cc;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #0077b3;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .danger {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .flash {
+            padding: 0.75rem 1rem;
+            background: #d4edda;
+            color: #155724;
+            border-radius: 5px;
+            margin-bottom: 1.5rem;
+        }
+
+        pre {
+            background: #2b2b2b;
+            color: #f8f8f2;
+            padding: 1rem;
+            border-radius: 6px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        form {
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>⚙️ Настройки R2 RISE Logging</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" enctype="multipart/form-data">
+        <label>API ID</label>
+        <input type="text" name="api_id" value="{{ config.telegram.api_id }}">
+
+        <label>API Hash</label>
+        <input type="text" name="api_hash" value="{{ config.telegram.api_hash }}">
+
+        <label>Phone Number</label>
+        <input type="text" name="phone" value="{{ config.telegram.phone }}">
+
+        <label>Bot Username (без @)</label>
+        <input type="text" name="bot_username" value="{{ config.telegram.bot_username }}">
+
+        <h3>📄 Google Sheets</h3>
+        <label>Spreadsheet ID</label>
+        <input type="text" name="sheet_id" value="{{ config.google_sheets.sheet_id }}">
+
+        {% if config.google_sheets.sheet_id %}
+            <p style="margin-top: -0.5rem; margin-bottom: 1.5rem;">
+                🔗
+                <a href="https://docs.google.com/spreadsheets/d/{{ config.google_sheets.sheet_id }}"
+                   target="_blank"
+                   style="color: #007bff; text-decoration: none; font-weight: bold;">
+                    Перейти к таблице Google Sheets ↗
+                </a>
+            </p>
+        {% endif %}
+
+        <label>credentials.json</label>
+        <input type="file" name="credentials_file">
+
+        <button type="submit">💾 Сохранить настройки</button>
+    </form>
+
+    <form action="{{ url_for('main.start') }}" method="get">
+        <button type="submit" {% if bot_running %}disabled{% endif %}>▶️ Запустить бота</button>
+    </form>
+
+    <form action="{{ url_for('main.stop') }}" method="get">
+        <button type="submit" {% if not bot_running %}disabled{% endif %}>⏹ Остановить бота</button>
+    </form>
+
+    <button id="toggle-logs-btn">📄 Показать последние логи</button>
+
+    <div id="log-container" style="display: none; margin-top: 1.5rem;">
+        <h3>📝 Последние строки из лога:</h3>
+        <pre id="log-area">Загрузка...</pre>
+    </div>
+
+
+    {% if log_output %}
+        <h3>📝 Последние строки из лога:</h3>
+        <pre>{{ log_output }}</pre>
+    {% endif %}
+
+    <form action="{{ url_for('main.clear_logs') }}" method="get">
+        <button type="submit" class="danger">🧹 Очистить лог</button>
+    </form>
+</div>
+<script>
+    const toggleBtn = document.getElementById("toggle-logs-btn");
+    const logContainer = document.getElementById("log-container");
+    const logArea = document.getElementById("log-area");
+    let logsVisible = false;
+    let logTimer = null;
+
+    async function fetchLogsOnce() {
+        const response = await fetch("{{ url_for('main.view_logs') }}?ajax=1");
+        const data = await response.json();
+        logArea.textContent = data.logs;
+    }
+
+    async function fetchLogsRepeatedly() {
+        if (!logsVisible) return;
+        await fetchLogsOnce();
+    }
+
+    toggleBtn.addEventListener("click", async () => {
+        logsVisible = !logsVisible;
+
+        if (logsVisible) {
+            logContainer.style.display = "block";
+            toggleBtn.textContent = "📄 Скрыть логи";
+            await fetchLogsOnce();
+            logTimer = setInterval(fetchLogsRepeatedly, 5000);
+        } else {
+            logContainer.style.display = "none";
+            toggleBtn.textContent = "📄 Показать последние логи";
+            clearInterval(logTimer);
+        }
+    });
+</script>
+
+</body>
+</html>
